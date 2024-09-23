@@ -1,0 +1,136 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+
+namespace C__test
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        string[] values;
+        List<string> valueList = new List<string>();
+        Random random = new Random();
+        Label initialClick = null;
+
+        string passwordAutoFill = "";
+        string passwordCheck = "";
+        int tempCounter = 0;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            listReader();
+            AssignKeysToButtons();
+        }
+
+        // Reads comma separated text file and imports as array, converts to List
+        public void listReader()
+        {
+            using (StreamReader myReader = new StreamReader(@"C:\Users\Ryan Patton\OneDrive\FISD\BPAVC Sharp RWP\letter.txt"))
+            {
+                string line = myReader.ReadToEnd();
+                values = line.Split(',');
+
+                foreach (string a in values)
+                {
+                    valueList.Add(a);
+                }
+            }
+        }
+
+        // Resets the entire contents. Note: we keep it simple by just reading from the text file again
+        private void resetVariables()
+        {
+            listReader();
+            passwordAutoFill = "";
+            passwordCheck = "";
+            tempCounter = 0;
+            textBox1.Text = "";
+            textBox2.Text = "";
+        }
+
+        // Assigns the key values a random value from imported list and removes it
+        // Only one value can appear, no duplicates
+        private async void AssignKeysToButtons()
+        {
+            foreach (UIElement element in tableLayoutPanel1.Children)
+            {
+                Label keyLabel = element as Label;
+                if (keyLabel != null)
+                {
+                    int randomNumber = random.Next(valueList.Count);
+                    keyLabel.Content = valueList[randomNumber];
+                    tempCounter++;
+
+                    // This is how we get our random password
+                    if (tempCounter % 2 == 0)
+                        passwordAutoFill += keyLabel.Content.ToString();
+
+                    await Task.Delay(100);
+                    keyLabel.Foreground = Brushes.Red;
+                    valueList.RemoveAt(randomNumber);
+                }
+            }
+            textBox1.Text = passwordAutoFill;
+        }
+
+        // Handles the clicking of the keypad and plays a system media sound
+        private void keypadClick(object sender, RoutedEventArgs e)
+        {
+            if (timer1.IsEnabled)  // this slows down the click speed
+                return;
+
+            System.Media.SystemSounds.Exclamation.Play();
+
+            Label clickedKey = sender as Label;
+            passwordCheck += clickedKey.Content.ToString();
+            textBox2.Text = passwordCheck;
+
+            if (clickedKey != null)
+            {
+                if (clickedKey.Foreground == Brushes.Black)
+                    return;
+
+                if (initialClick == null)
+                {
+                    initialClick = clickedKey;
+                    initialClick.Foreground = Brushes.Black;
+
+                    timer1.Start();
+                    return;
+                }
+            }
+        }
+
+        // Timer is used to control the display
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            timer1.Stop();
+            initialClick.Foreground = Brushes.Red;
+            initialClick = null;
+        }
+
+        // Placeholder for checking the password
+        private void checkPassword(object sender, RoutedEventArgs e)
+        {
+            // Code for checking the password would go here
+            if (passwordCheck.CompareTo(passwordAutoFill) == 0)
+            {
+                MessageBox.Show("Your passwords match!", "Congratulations on security keypad prototype!");
+                DialogResult responseYN = MessageBox.Show("Do you want to try again?", "Yes or No?", MessageBoxButtons.YesNo);
+                if (responseYN == DialogResult.Yes)
+                {
+                    resetVariables();
+                    AssignKeysToButtons();
+                }
+                else { Application.Exit(); }
+            }
+        }
+    }
+}
